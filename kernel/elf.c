@@ -71,7 +71,40 @@ elf_status elf_load(elf_ctx *ctx) {
     if (elf_fpread(ctx, dest, ph_addr.memsz, ph_addr.off) != ph_addr.memsz)
       return EL_EIO;
   }
+  // sprint("ELFloading...\n");
+  section_table = (void*)0x083000000;
+  section_table = elf_alloc_mb(ctx,(uint64)((uint8*)&ctx->ehdr+ctx->ehdr.shoff),(uint64)((uint8*)&ctx->ehdr+ctx->ehdr.shoff),ctx->ehdr.shentsize*ctx->ehdr.shnum);
+  elf_fpread(ctx, section_table,ctx->ehdr.shentsize*ctx->ehdr.shnum, ctx->ehdr.shoff);
+  strtab = (void*)0x084000000;
+  strtab = elf_alloc_mb(ctx,(uint64)strtab,(uint64)strtab,section_table[ctx->ehdr.shstrndx].size);
+  // elf_fpread(ctx,strtab,section_table[ctx->ehdr.shstrndx].size,section_table[ctx->ehdr.shstrndx].offset);
 
+  for (i = 0; i < ctx->ehdr.shnum; i++)
+    {
+      // sprint("sloading: i:%d  %llx %llx %llx %llx %llx\n",i,section_table[i].type,section_table[i].addr,section_table[i].name,section_table[i].offset,section_table[i].size);
+      
+      if (section_table[i].type == 2) 
+      {
+        symtab = (void*)0x085000000;
+        // symtab = (symbol_table*)((uint8*)&ctx->ehdr + section_table[i].offset);
+        symtab=elf_alloc_mb(ctx,(uint64)symtab,(uint64)symtab,section_table[i].size);
+        elf_fpread(ctx,symtab,section_table[i].size,section_table[i].offset);
+        break;
+      }
+    }
+    for (i = 0; i < ctx->ehdr.shnum; i++)
+    {
+      // sprint("sloading: i:%d  %llx %llx %llx %llx %llx\n",i,section_table[i].type,section_table[i].addr,section_table[i].name,section_table[i].offset,section_table[i].size);
+      
+      if (section_table[i].type == 3) 
+      {
+        strtab = (void*)0x085000000;
+        // symtab = (symbol_table*)((uint8*)&ctx->ehdr + section_table[i].offset);
+        strtab=elf_alloc_mb(ctx,(uint64)symtab,(uint64)symtab,section_table[i].size);
+        elf_fpread(ctx,symtab,section_table[i].size,section_table[i].offset);
+        break;
+      }
+    }
   return EL_OK;
 }
 
@@ -114,7 +147,6 @@ void load_bincode_from_host_elf(process *p) {
   sprint("Application: %s\n", arg_bug_msg.argv[0]);
 
   //elf loading. elf_ctx is defined in kernel/elf.h, used to track the loading process.
-  elf_ctx elfloader;
   // elf_info is defined above, used to tie the elf file and its corresponding process.
   elf_info info;
 

@@ -9,7 +9,7 @@
 #include "util/types.h"
 #include "util/snprintf.h"
 #include "kernel/syscall.h"
-// #include "kernel/elf.h"
+#include "kernel/elf.h"
 
 
 
@@ -66,39 +66,31 @@ int printu(const char* s, ...) {
 int exit(int code) {
   return do_user_call(SYS_user_exit, code, 0, 0, 0, 0, 0, 0); 
 }
+
+int print_function_name(void* addr)
+{
+    return do_user_call(SYS_user_print_function_name ,(long)addr ,0 , 0, 0, 0, 0, 0);
+}
+
+
 void print_backtrace(int depth)
 {
   // uint64 shoff=elf_header.shoff;
-  uint64 fp;
-  uint64 sp;
+  void *fp;
   asm volatile
   (
     "sd fp,%0\n\t"
-    "sd sp,%1"
-    :"=m"(fp),"=m"(sp)
+    :"=m"(fp)
     :
     :"memory"
   );
-  printu("fp:%llx sp:%llx\n",fp,sp);
-  long long lastfp,ra;
-  // printu("begin:");
-  // asm volatile
-  // (
-  //   "ld a5,%2\n\t"
-  //   "ld a5,-16(a5)\n\t"
-  //   "sd a5,%0\n\t"
-  //   "ld a5,%3\n\t"
-  //   "ld a5,-8(a5)\n\t"
-  //   "sd a5,%1"
-  //   :"=m"(lastfp),"=m"(ra)
-  //   :"m"(fp),"m"(fp)
-  //   :"memory"
-  // );
-  // printu("fp:%llx lastfp:%llx ra:%llx\n",fp,lastfp,ra);
-  // fp=lastfp;
-  for(int i=0;i<depth;++i)
+  // printu("fp:%llx\n",fp);
+  void *lastfp,*ra;
+  elf_ctx ctx;
+  section_header *shdr=NULL;
+  for(int i=0;i<depth&&fp;++i)
   {
-    printu("depth:%d\n",depth-i);
+    // printu("depth:%d\n",depth-i);
     asm volatile
     (
       "ld a5,%2\n\t"
@@ -111,7 +103,10 @@ void print_backtrace(int depth)
       :"m"(fp),"m"(fp)
       :"memory"
     );
-    printu("fp:%llx lastfp:%llx ra:%llx\n",fp,lastfp,ra);
+    if(!lastfp)break;
+    // printu("fp:%llx lastfp:%llx ra:%llx\n",fp,lastfp,ra);
+    int res=print_function_name(ra);
+    if(res==0)break;
     fp=lastfp;
   }
 }

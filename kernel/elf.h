@@ -25,6 +25,7 @@ typedef struct elf_header_t {
   uint16 shstrndx;  /* Section header string table index */
 } elf_header;
 
+
 // Program segment header.
 typedef struct elf_prog_header_t {
   uint32 type;   /* Segment type */
@@ -36,6 +37,30 @@ typedef struct elf_prog_header_t {
   uint64 memsz;  /* Segment size in memory */
   uint64 align;  /* Segment alignment */
 } elf_prog_header;
+
+// elf section header structure
+typedef struct section_header_t {
+  uint32 name;      /* Section name (string table index) */
+  uint32 type;      /* Section type */
+  uint64 flags;     /* Section flags */
+  uint64 addr;      /* Section virtual address */
+  uint64 offset;    /* Section file offset */
+  uint64 size;      /* Section size in bytes */
+  uint32 link;      /* Link to another section */
+  uint32 info;      /* Additional section information */
+  uint64 addralign; /* Section alignment */
+  uint64 entsize;   /* Entry size if section holds table */
+} section_header;
+
+// elf symbol table
+typedef struct symbol_table_t {
+  uint32 name;      /* Symbol name (string table index) */
+  uint8 info;       /* Symbol type and binding attributes */
+  uint8 reserved;   /* Reserved */
+  uint16 shndx;     /* Section table index */
+  uint64 value;     /* Symbol value */
+  uint64 size;      /* Symbol size */
+} symbol_table;
 
 #define ELF_MAGIC 0x464C457FU  // "\x7FELF" in little endian
 #define ELF_PROG_LOAD 1
@@ -55,9 +80,13 @@ typedef struct elf_ctx_t {
   elf_header ehdr;
 } elf_ctx;
 
+elf_ctx elfloader;
+section_header *section_table;
+// uint64 elf_fpread(elf_ctx *ctx, void *dest, uint64 nb, uint64 offset);
 elf_status elf_init(elf_ctx *ctx, void *info);
 elf_status elf_load(elf_ctx *ctx);
-
+char* strtab;
+symbol_table *symtab;
 void load_bincode_from_host_elf(process *p);
 
 #endif
