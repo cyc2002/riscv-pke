@@ -9,6 +9,7 @@
 #include "util/types.h"
 #include "util/snprintf.h"
 #include "kernel/syscall.h"
+// #include "kernel/elf.h"
 
 
 
@@ -64,4 +65,53 @@ int printu(const char* s, ...) {
 //
 int exit(int code) {
   return do_user_call(SYS_user_exit, code, 0, 0, 0, 0, 0, 0); 
+}
+void print_backtrace(int depth)
+{
+  // uint64 shoff=elf_header.shoff;
+  uint64 fp;
+  uint64 sp;
+  asm volatile
+  (
+    "sd fp,%0\n\t"
+    "sd sp,%1"
+    :"=m"(fp),"=m"(sp)
+    :
+    :"memory"
+  );
+  printu("fp:%llx sp:%llx\n",fp,sp);
+  long long lastfp,ra;
+  // printu("begin:");
+  // asm volatile
+  // (
+  //   "ld a5,%2\n\t"
+  //   "ld a5,-16(a5)\n\t"
+  //   "sd a5,%0\n\t"
+  //   "ld a5,%3\n\t"
+  //   "ld a5,-8(a5)\n\t"
+  //   "sd a5,%1"
+  //   :"=m"(lastfp),"=m"(ra)
+  //   :"m"(fp),"m"(fp)
+  //   :"memory"
+  // );
+  // printu("fp:%llx lastfp:%llx ra:%llx\n",fp,lastfp,ra);
+  // fp=lastfp;
+  for(int i=0;i<depth;++i)
+  {
+    printu("depth:%d\n",depth-i);
+    asm volatile
+    (
+      "ld a5,%2\n\t"
+      "ld a5,-16(a5)\n\t"
+      "sd a5,%0\n\t"
+      "ld a5,%3\n\t"
+      "ld a5,-8(a5)\n\t"
+      "sd a5,%1"
+      :"=m"(lastfp),"=m"(ra)
+      :"m"(fp),"m"(fp)
+      :"memory"
+    );
+    printu("fp:%llx lastfp:%llx ra:%llx\n",fp,lastfp,ra);
+    fp=lastfp;
+  }
 }
