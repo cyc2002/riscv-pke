@@ -103,7 +103,7 @@ void print_backtrace(int depth)
       :"m"(fp),"m"(fp)
       :"memory"
     );
-    if(!lastfp)break;
+    // if(!lastfp)break;
     // printu("fp:%llx lastfp:%llx ra:%llx\n",fp,lastfp,ra);
     int res=print_function_name(ra);
     if(res==0)break;
