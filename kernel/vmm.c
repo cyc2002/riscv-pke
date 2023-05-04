@@ -191,6 +191,7 @@ void user_vm_unmap(pagetable_t page_dir, uint64 va, uint64 size, int free) {
   // as naive_free reclaims only one page at a time, you only need to consider one page
   // to make user/app_naive_malloc to behave correctly.
   pte_t *PTE = page_walk(page_dir,va,0);
+  if(PTE==NULL)return;
   free_page((void*)PYHS_ADDR(*PTE));
   *PTE &= ~1;
 }
