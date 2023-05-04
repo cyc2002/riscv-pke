@@ -62,6 +62,7 @@ uint64 sys_user_free_page(uint64 va) {
 // returns the code of success, (e.g., 0 means success, fail for otherwise)
 //
 long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, long a7) {
+  // sprint("doing syscall! a:%lld %lld %lld %lld %lld %lld %lld %lld\n",a0,a1,a2,a3,a4,a5,a6,a7);
   switch (a0) {
     case SYS_user_print:
       return sys_user_print((const char*)a1, a2);
