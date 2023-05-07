@@ -9,6 +9,7 @@
 #include "pmm.h"
 #include "vmm.h"
 #include "util/functions.h"
+#include "memlayout.h"
 
 #include "spike_interface/spike_utils.h"
 
@@ -50,6 +51,15 @@ void handle_mtimer_trap() {
 //
 void handle_user_page_fault(uint64 mcause, uint64 sepc, uint64 stval) {
   sprint("handle_page_fault: %lx\n", stval);
+
+  static const uint64 top=USER_STACK_TOP;
+  static const uint64 MAX_STACK_SIZE=20*PGSIZE;
+  sprint("top:%llx,btn:%llx,stval:%llx\n",top,top-MAX_STACK_SIZE,stval);
+  if(stval>top||stval<top-MAX_STACK_SIZE)
+  {
+    panic("this address is not available!");
+  }
+
   uint64 va = (stval >> PGSHIFT) << PGSHIFT;
   void* pa = NULL;
   switch (mcause) {
