@@ -101,10 +101,103 @@ void shutdown(int code) {
     ;
 }
 
+void print_debug_line()
+{
+  // sprint("print debug line!\n");
+  if(!current)return;
+  uint64 sepc=read_csr(sepc);
+  uint64 mepc=read_csr(mepc);
+  // uint64 mstatus=read_csr(mstatus);
+  // uint64 mcause=read_csr(mcause);
+  // sprint("sepc:%llx mepc:%llx mstatus:%llx mcause:%llx\n",sepc,mepc,mstatus&MSTATUS_MPP_MASK,mcause);
+  addr_line *line=current->line;
+  code_file *file=current->file;
+  char **dir=current->dir;for(int i=0;i<current->line_ind;++i)
+  {
+    // sprint("%llx %llx %llx\n",line[i].addr,line[i].file,line[i].line);
+    if(line[i].addr==mepc)
+    {
+      sprint("Runtime error at %s/%s:%d\n",dir[file[line[i].file].dir],file[line[i].file].file,line[i].line);
+      static char buffer[102400];
+      int len=0;
+      for(;;++len)
+      {
+        buffer[len]=dir[file[line[i].file].dir][len];
+        if(!buffer[len])break;
+      }
+      buffer[len++]='/';
+      for(int j=0;;)
+      {
+        if(!(buffer[len++]=file[line[i].file].file[j++]))
+          break;
+      }
+      // sprint("%s\n",buffer);
+      spike_file_t *code=spike_file_open(buffer,O_RDONLY,0);
+      spike_file_pread(code,buffer,sizeof(buffer),0);
+      for(int j=0,cnt=1;j<102400;++j)
+      {
+        if(cnt==line[i].line)
+        {
+          for(;j<102400&&buffer[j]!='\n';++j)
+          {
+            sprint("%c",buffer[j]);
+          }
+          sprint("\n");
+          return;
+        }
+        if(buffer[j]=='\n')
+          ++cnt;
+      }
+      return;
+    }
+  }
+  for(int i=0;i<current->line_ind;++i)
+  {
+    // sprint("%llx %llx %llx\n",line[i].addr,line[i].file,line[i].line);
+    if(line[i].addr==sepc)
+    {
+      sprint("Runtime error at %s/%s:%d\n",dir[file[line[i].file].dir],file[line[i].file].file,line[i].line);
+      static char buffer[102400];
+      int len=0;
+      for(;;++len)
+      {
+        buffer[len]=dir[file[line[i].file].dir][len];
+        if(!buffer[len])break;
+      }
+      buffer[len++]='/';
+      for(int j=0;;)
+      {
+        if(!(buffer[len++]=file[line[i].file].file[j++]))
+          break;
+      }
+      // sprint("%s\n",buffer);
+      spike_file_t *code=spike_file_open(buffer,O_RDONLY,0);
+      spike_file_pread(code,buffer,sizeof(buffer),0);
+      for(int j=0,cnt=1;j<102400;++j)
+      {
+        if(cnt==line[i].line)
+        {
+          for(;j<102400&&buffer[j]!='\n';++j)
+          {
+            sprint("%c",buffer[j]);
+          }
+          sprint("\n");
+          return;
+        }
+        if(buffer[j]=='\n')
+          ++cnt;
+      }
+      return;
+    }
+  }
+  sprint("instruction not found!\n");
+}
+
 void do_panic(const char* s, ...) {
+  // sprint("do panic\n");
   va_list vl;
   va_start(vl, s);
-
+  print_debug_line();
   sprint(s, vl);
   shutdown(-1);
 

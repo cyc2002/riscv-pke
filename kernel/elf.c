@@ -218,7 +218,21 @@ elf_status elf_load(elf_ctx *ctx) {
     if (elf_fpread(ctx, dest, ph_addr.memsz, ph_addr.off) != ph_addr.memsz)
       return EL_EIO;
   }
-
+    elf_sect_header sectiontable[ctx->ehdr.shnum];
+    elf_fpread(ctx,sectiontable,sizeof(sectiontable),ctx->ehdr.shoff);
+    char shstr[sectiontable[ctx->ehdr.shstrndx].size];
+    elf_fpread(ctx,shstr,sizeof(shstr),sectiontable[ctx->ehdr.shstrndx].offset);
+    for(i=0;i<ctx->ehdr.shnum;i++)
+    {
+        // sprint("%s\n",shstr+sectiontable[i].name);
+        if(strcmp(shstr+sectiontable[i].name,".debug_line")==0)
+        {
+            static char degugline[10485760];
+            elf_fpread(ctx,degugline,sectiontable[i].size,sectiontable[i].offset);
+            make_addr_line(ctx,degugline,sectiontable[i].size);
+            break;
+        }
+    }
   return EL_OK;
 }
 
