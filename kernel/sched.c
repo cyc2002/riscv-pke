@@ -41,8 +41,8 @@ void insert_to_ready_queue( process* proc ) {
 // process is still runnable, you should place it into the ready queue (by calling
 // ready_queue_insert), and then call schedule().
 //
-extern process procs[NPROC];
 void schedule() {
+  // sprint("shedele!!\n");
   if ( !ready_queue_head ){
     // by default, if there are no ready process, and all processes are in the status of
     // FREE and ZOMBIE, we should shutdown the emulated RISC-V machine.

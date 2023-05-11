@@ -143,6 +143,7 @@ process* alloc_process() {
     procs[i].trapframe, procs[i].trapframe->regs.sp, procs[i].kstack);
 
   procs[i].total_mapped_region = 3;
+  procs[i].waitpid=0;
   // return after initialization.
   return &procs[i];
 }
@@ -155,7 +156,21 @@ int free_process( process* proc ) {
   // since proc can be current process, and its user kernel stack is currently in use!
   // but for proxy kernel, it (memory leaking) may NOT be a really serious issue,
   // as it is different from regular OS, which needs to run 7x24.
-  proc->status = ZOMBIE;
+  if(!proc->parent)
+  {
+    proc->status=FREE;
+  }
+  else if(proc->parent->status==BLOCKED&&(proc->parent->waitpid==proc->pid||proc->parent->waitpid==-1))
+  {
+    proc->parent->trapframe->regs.a0=proc->pid;
+    proc->parent->waitpid=0;
+    insert_to_ready_queue(proc->parent);
+    proc->status=FREE;
+  }
+  else
+  {
+    proc->status = ZOMBIE;
+  }
 
   return 0;
 }
@@ -182,6 +197,18 @@ int do_fork( process* parent)
       case STACK_SEGMENT:
         memcpy( (void*)lookup_pa(child->pagetable, child->mapped_info[0].va),
           (void*)lookup_pa(parent->pagetable, parent->mapped_info[i].va), PGSIZE );
+        break;
+      case DATA_SEGMENT:
+        child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
+        void * newpage=alloc_page();
+        user_vm_map(child->pagetable,child->mapped_info[child->total_mapped_region].va,PGSIZE,
+                  (uint64)newpage,prot_to_type(PROT_READ | PROT_WRITE, 1));
+        memcpy( (void*)lookup_pa(child->pagetable, child->mapped_info[child->total_mapped_region].va),
+          (void*)lookup_pa(parent->pagetable, parent->mapped_info[i].va), PGSIZE );
+        child->mapped_info[child->total_mapped_region].npages =
+          parent->mapped_info[i].npages;
+        child->mapped_info[child->total_mapped_region].seg_type = DATA_SEGMENT;
+        child->total_mapped_region++;
         break;
       case CODE_SEGMENT:
         // TODO (lab3_1): implment the mapping of child code segment to parent's

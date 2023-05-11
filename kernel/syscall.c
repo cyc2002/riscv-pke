@@ -32,9 +32,9 @@ ssize_t sys_user_print(const char* buf, size_t n) {
 // implement the SYS_user_exit syscall
 //
 ssize_t sys_user_exit(uint64 code) {
+  free_process( current );
   sprint("User exit with code:%d.\n", code);
   // reclaim the current process, and reschedule. added @lab3_1
-  free_process( current );
   schedule();
   return 0;
 }
@@ -84,6 +84,56 @@ ssize_t sys_user_yield() {
   return 0;
 }
 
+ssize_t sys_user_wait(int64 pid)
+{
+  if(pid<-1||pid==0)
+    return -1;
+  if(pid>0)
+  {
+    bool found=0;
+    for(int i=0; i<NPROC; i++ )
+      {
+        if(procs[i].pid==pid)
+        {
+          if(procs[i].parent!=current)
+            panic("Process with pid %d is not current's child!",pid);
+          else if(procs[i].status==ZOMBIE)
+          {
+            free_process(&procs[i]);
+            return pid;
+          }
+          else
+            found=1;
+        }
+      }
+    if(!found)
+      panic("Process with pid %d not found!",pid);
+  }
+  else
+  {
+    bool found=0;
+    for(int i=0; i<NPROC; i++ )
+      {
+        if(procs[i].parent==current)
+        {
+          if(procs[i].status==ZOMBIE)
+          {
+            // free_process(&procs[i]);
+            return procs[i].pid;
+          }
+          else
+            found=1;
+        }
+      }
+    if(!found)
+      panic("Child not found!",pid);
+  }
+  current->waitpid=pid;
+  current->status=BLOCKED;
+  schedule();
+  return pid;
+}
+
 //
 // [a0]: the syscall number; [a1] ... [a7]: arguments to the syscalls.
 // returns the code of success, (e.g., 0 means success, fail for otherwise)
@@ -104,6 +154,8 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
       return sys_user_fork();
     case SYS_user_yield:
       return sys_user_yield();
+    case SYS_user_wait:
+      return sys_user_wait(a1);
     default:
       panic("Unknown syscall %ld \n", a0);
   }
