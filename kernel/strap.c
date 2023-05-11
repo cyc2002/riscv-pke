@@ -21,11 +21,9 @@ static void handle_syscall(trapframe *tf) {
   // in RV64G, each instruction occupies exactly 32 bits (i.e., 4 Bytes)
   tf->epc += 4;
 
-  // TODO (lab1_1): remove the panic call below, and call do_syscall (defined in
-  // kernel/syscall.c) to conduct real operations of the kernel side for a syscall.
-  // IMPORTANT: return value should be returned to user app, or else, you will encounter
-  // problems in later experiments!
-  panic( "call do_syscall to accomplish the syscall and lab1_1 here.\n" );
+			
+			
+	tf->regs.a0 = do_syscall(tf->regs.a0,tf->regs.a1,tf->regs.a2,tf->regs.a3,tf->regs.a4,tf->regs.a5,tf->regs.a6,tf->regs.a7);
 
 }
 
@@ -37,10 +35,11 @@ static uint64 g_ticks = 0;
 //
 void handle_mtimer_trap() {
   sprint("Ticks %d\n", g_ticks);
-  // TODO (lab1_3): increase g_ticks to record this "tick", and then clear the "SIP"
-  // field in sip register.
-  // hint: use write_csr to disable the SIP_SSIP bit in sip.
-  panic( "lab1_3: increase g_ticks by one, and clear SIP field in sip register.\n" );
+
+  g_ticks++;
+
+  write_csr(sip,read_csr(sip)&(~SIP_SSIP));
+
 
 }
 
@@ -51,13 +50,18 @@ void handle_mtimer_trap() {
 //
 void handle_user_page_fault(uint64 mcause, uint64 sepc, uint64 stval) {
   sprint("handle_page_fault: %lx\n", stval);
+  uint64 va = (stval >> PGSHIFT) << PGSHIFT;
+  void* pa = NULL;
   switch (mcause) {
     case CAUSE_STORE_PAGE_FAULT:
       // TODO (lab2_3): implement the operations that solve the page fault to
       // dynamically increase application stack.
       // hint: first allocate a new physical page, and then, maps the new page to the
       // virtual address that causes the page fault.
-      panic( "You need to implement the operations that actually handle the page fault in lab2_3.\n" );
+      
+      pa = alloc_page();
+      user_vm_map((pagetable_t)current->pagetable, va, PGSIZE, (uint64)pa,
+         prot_to_type(PROT_WRITE | PROT_READ, 1));
 
       break;
     default:
