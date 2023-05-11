@@ -6,6 +6,7 @@
 #include "spike_interface/spike_utils.h"
 
 process* ready_queue_head = NULL;
+process* sem_queue_head[SEM_MAX];
 
 //
 // insert a process, proc, into the END of ready queue.
@@ -34,7 +35,32 @@ void insert_to_ready_queue( process* proc ) {
 
   return;
 }
+void insert_to_sem_queue( process* proc ,int semid) {
+  if(semid<0||semid>=semused)
+    panic("Invalid sem id %d\n",semid);
+  sprint( "going to insert process %d to sem queue %d.\n", proc->pid ,semid);
+  // if the queue is empty in the beginning
+  if( sem_queue_head[semid] == NULL ){
+    proc->status = BLOCKED;
+    proc->queue_next = NULL;
+    sem_queue_head[semid] = proc;
+    return;
+  }
 
+  // ready queue is not empty
+  process *p;
+  // browse the ready queue to see if proc is already in-queue
+  for( p=sem_queue_head[semid]; p->queue_next!=NULL; p=p->queue_next )
+    if( p == proc ) return;  //already in queue
+
+  // p points to the last element of the ready queue
+  if( p==proc ) return;
+  p->queue_next = proc;
+  proc->status = BLOCKED;
+  proc->queue_next = NULL;
+
+  return;
+}
 //
 // choose a proc from the ready queue, and put it to run.
 // note: schedule() does not take care of previous current process. If the current
@@ -70,4 +96,20 @@ void schedule() {
   current->status = RUNNING;
   sprint( "going to schedule process %d to run.\n", current->pid );
   switch_to( current );
+}
+
+
+int semschedule(int semid) {
+  if(semid<0||semid>=semused)
+    panic("Invalid sem id %d\n",semid);
+  if ( !sem_queue_head[semid] ){
+    return 1;
+  }
+
+  process *ready = sem_queue_head[semid];
+  assert( ready->status == BLOCKED );
+  sem_queue_head[semid] = sem_queue_head[semid]->queue_next;
+
+  insert_to_ready_queue(ready);
+  return 0;
 }
